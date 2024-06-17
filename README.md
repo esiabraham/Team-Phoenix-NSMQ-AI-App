@@ -1,16 +1,23 @@
 # phoenix_nsmq
 
-A new Flutter project.
+Flutter desktop application for the Phoenix NSMQ Quiz App.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+To run the application, you need to have Flutter installed on your machine. If you don't have Flutter installed, you can follow the instructions [here](https://flutter.dev/docs/get-started/install).
 
-A few resources to get you started if this is your first Flutter project:
+After installing Flutter, you can clone the repository and run the application using the following commands:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+git clone
+cd phoenix_nsmq
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+You would need to specify a path to the questions file in the `lib/services.dart` file. The questions file should be in the following format:
+
+```csv
+question,answer,subject,reason
+how are you,true,biology,
+how are you,false,chemistry,because i am not fine
+```

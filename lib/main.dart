@@ -46,7 +46,7 @@ class MyApp extends StatelessWidget {
       routes: {
         mainRoute: (context) => const ModeSelectionScreen(),
         subjectSelectionRoute: (context) => const SubjectSelectionScreen(),
-        questionsRoute: (context) => const QuestionsScreen(),
+        questionsRoute: (context) => QuestionsScreen(),
       },
       initialRoute: mainRoute,
     );

@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:isolate';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:phoenix_nsmq/models.dart';
 import 'package:phoenix_nsmq/store.dart';
 import 'package:phoenix_nsmq/utils.dart';
 import 'package:vxstate/vxstate.dart';
+import 'package:onnxruntime/onnxruntime.dart';
 
 const timerCompleted = 'TIMER_COMPLETED';
+const timePerQuestion = 20;
 
 class TimerParams {
   final SendPort sendPort;
@@ -37,13 +40,15 @@ class QuestionsScreen extends StatefulWidget {
 
 class _QuestionsScreenState extends State<QuestionsScreen> {
   final AppStore _appStore = VxState.store as AppStore;
-  int _currentQuetionIndex = 0;
+  int _currentQuetionIndex = -1;
   int _timeLeft = 0;
   int _selectedAnswerIndex = -1;
   int _score = 0;
   late List<Question> _questions;
 
   late Isolate _isolate;
+  bool _isFirstRun = true;
+
   // late ReceivePort _receivePort;
 
   void goToMainScreen(BuildContext context) {
@@ -132,12 +137,10 @@ class _QuestionsScreenState extends State<QuestionsScreen> {
 
   void goToNextQuestion() {
     if (_currentQuetionIndex < _questions.length - 1) {
-      // _receivePort?.close();
-      // _receivePort = ReceivePort();
       setState(() {
         _currentQuetionIndex++;
         // TODO: derive from question. whether is contains calculations or not
-        _timeLeft = 7;
+        _timeLeft = timePerQuestion;
       });
       startTimerIsolate();
     } else {
@@ -147,7 +150,24 @@ class _QuestionsScreenState extends State<QuestionsScreen> {
         builder: (context) {
           return AlertDialog(
             title: const Text('Congratulations!'),
-            content: const Text('You have completed the quiz.'),
+            content: RichText(
+              text: TextSpan(
+                text: "You have completed the quiz: ",
+                style: const TextStyle(
+                  color: Colors.black,
+                ),
+                children: [
+                  TextSpan(
+                    text: "\n\nFinal score: $_score",
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             actions: [
               TextButton(
                 onPressed: () {
@@ -176,7 +196,7 @@ class _QuestionsScreenState extends State<QuestionsScreen> {
                 Navigator.pop(context);
                 goToNextQuestion();
               },
-              child: const Text('Finish'),
+              child: const Text('Next'),
             ),
           ],
         );
@@ -191,14 +211,14 @@ class _QuestionsScreenState extends State<QuestionsScreen> {
       TimerParams(
         sendPort: receivePort.sendPort,
         // TODO: derive from question. whether is contains calculations or not
-        duration: const Duration(seconds: 7),
+        duration: const Duration(seconds: timePerQuestion),
       ),
     );
     receivePort.listen((data) {
       if (data is int) {
         setState(() {
           // TODO: derive from question. whether is contains calculations or not
-          _timeLeft = 7 - data;
+          _timeLeft = timePerQuestion - data;
         });
       } else if (data == timerCompleted) {
         _isolate.kill(priority: Isolate.immediate);
@@ -208,246 +228,264 @@ class _QuestionsScreenState extends State<QuestionsScreen> {
     });
   }
 
+  loadTtsModel() async {
+    OrtEnv.instance.init();
+    final sessionOptions = OrtSessionOptions();
+    const assetFileName = 'assets/models/test.onnx';
+    final rawAssetFile = await rootBundle.load(assetFileName);
+    final bytes = rawAssetFile.buffer.asUint8List();
+    final session = OrtSession.fromBuffer(bytes, sessionOptions);
+  }
+
   @override
   void initState() {
     super.initState();
+    // loadTtsModel();
   }
-  
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    print(">>> didChangeDependencies");
     _questions = ModalRoute.of(context)!.settings.arguments as List<Question>;
-    if (context.mounted) {
-      startTimerIsolate();
+    if (_isFirstRun) {
+      goToNextQuestion();
+      _isFirstRun = false;
     }
   }
 
   @override
   void dispose() {
     _isolate.kill();
+    // OrtEnv.instance.release();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // var questions =
-    //     ModalRoute.of(context)!.settings.arguments as List<Question>;
-    var currentQuestion = _questions[_currentQuetionIndex];
+    try {
+      var currentQuestion = _questions[_currentQuetionIndex];
 
-    return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFF0E1647),
-                      Color(0xFF0A1033),
-                    ],
+      return Scaffold(
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFF0E1647),
+                        Color(0xFF0A1033),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            Column(
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                // top bar
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 50,
-                    vertical: 10,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade900,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        padding: const EdgeInsets.only(
-                          bottom: 8.0,
-                          top: 8.0,
-                          right: 18.0,
-                          left: 4.0,
-                        ),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              onPressed: () {
-                                goToMainScreen(context);
-                              },
-                              icon: const Icon(
-                                Icons.cancel_outlined,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              "${getEnumName(_appStore.mode)} (${getEnumName(_appStore.subject)})",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        "00:$_timeLeft",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.yellow.shade900,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: RichText(
-                          text: TextSpan(
-                            text: "Score: ",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                            ),
+              Column(
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  // top bar
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 50,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade900,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          padding: const EdgeInsets.only(
+                            bottom: 8.0,
+                            top: 8.0,
+                            right: 18.0,
+                            left: 4.0,
+                          ),
+                          child: Row(
                             children: [
-                              TextSpan(
-                                text: "$_score",
+                              IconButton(
+                                onPressed: () {
+                                  goToMainScreen(context);
+                                },
+                                icon: const Icon(
+                                  Icons.cancel_outlined,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                "${getEnumName(_appStore.mode)} (${getEnumName(_appStore.subject)})",
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
-                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // question
-                Flexible(
-                  flex: 1,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 100.0,
-                    ),
-                    child: Center(
-                      child: Text(
-                        currentQuestion.question,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
+                        Text(
+                          "00:$_timeLeft",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                ),
-
-                // answer box
-                Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      left: 100.0,
-                      right: 100.0,
-                      bottom: 50.0,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Expanded(
-                          child: currentQuestion.type == QuestionType.TRUE_FALSE
-                              ? Row(
-                                  children: [
-                                    Radio(
-                                      value: 0,
-                                      groupValue: _selectedAnswerIndex,
-                                      onChanged: (value) {
-                                        if (value != null) {
-                                          setState(() {
-                                            _selectedAnswerIndex = value;
-                                          });
-                                          onAnswerQuestion(value);
-                                        }
-                                      },
-                                    ),
-                                    const Text(
-                                      'True',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 40.0),
-                                    Radio(
-                                      value: 1,
-                                      groupValue: _selectedAnswerIndex,
-                                      onChanged: (value) {
-                                        if (value != null) {
-                                          setState(() {
-                                            _selectedAnswerIndex = value;
-                                          });
-                                          onAnswerQuestion(value);
-                                        }
-                                      },
-                                    ),
-                                    const Text(
-                                      'False',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : const TextField(
-                                  decoration: InputDecoration(
-                                    border: OutlineInputBorder(),
-                                    labelText: 'Type your answer',
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.yellow.shade900,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: RichText(
+                            text: TextSpan(
+                              text: "Score: ",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: "$_score",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                        ),
-                        const SizedBox(width: 20),
-                        IconButton(
-                          onPressed: () {},
-                          icon: const Icon(
-                            Icons.mic,
-                            color: Colors.white,
-                          ),
-                          style: ButtonStyle(
-                            backgroundColor: MaterialStateProperty.all<Color>(
-                              Colors.blue.shade900,
-                            ),
-                            shape: MaterialStateProperty.all<
-                                RoundedRectangleBorder>(
-                              RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(100),
-                                side: const BorderSide(
-                                  color: Colors.white,
-                                  style: BorderStyle.solid,
-                                  width: 4.0,
-                                ),
-                              ),
+                              ],
                             ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+
+                  // question
+                  Flexible(
+                    flex: 1,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 100.0,
+                      ),
+                      child: Center(
+                        child: Text(
+                          currentQuestion.question,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // answer box
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        left: 100.0,
+                        right: 100.0,
+                        bottom: 50.0,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Expanded(
+                            child:
+                                currentQuestion.type == QuestionType.TRUE_FALSE
+                                    ? Row(
+                                        children: [
+                                          Radio(
+                                            value: 0,
+                                            groupValue: _selectedAnswerIndex,
+                                            onChanged: (value) {
+                                              if (value != null) {
+                                                setState(() {
+                                                  _selectedAnswerIndex = value;
+                                                });
+                                                onAnswerQuestion(value);
+                                              }
+                                            },
+                                          ),
+                                          const Text(
+                                            'True',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 40.0),
+                                          Radio(
+                                            value: 1,
+                                            groupValue: _selectedAnswerIndex,
+                                            onChanged: (value) {
+                                              if (value != null) {
+                                                setState(() {
+                                                  _selectedAnswerIndex = value;
+                                                });
+                                                onAnswerQuestion(value);
+                                              }
+                                            },
+                                          ),
+                                          const Text(
+                                            'False',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : const TextField(
+                                        decoration: InputDecoration(
+                                          border: OutlineInputBorder(),
+                                          labelText: 'Type your answer',
+                                        ),
+                                      ),
+                          ),
+                          const SizedBox(width: 20),
+                          IconButton(
+                            onPressed: () {},
+                            icon: const Icon(
+                              Icons.mic,
+                              color: Colors.white,
+                            ),
+                            style: ButtonStyle(
+                              backgroundColor: MaterialStateProperty.all<Color>(
+                                Colors.blue.shade900,
+                              ),
+                              shape: MaterialStateProperty.all<
+                                  RoundedRectangleBorder>(
+                                RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(100),
+                                  side: const BorderSide(
+                                    color: Colors.white,
+                                    style: BorderStyle.solid,
+                                    width: 4.0,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
   }
 }

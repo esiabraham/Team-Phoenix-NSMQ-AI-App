@@ -44,6 +44,16 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 const Text(
+                  'Phoenix Quiz App',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+                const SizedBox(height: 50),
+                const Text(
                   'Leveling the Playing Field: AI Tool\nfor Every Student\'s NSMQ Success!',
                   style: TextStyle(
                     color: Colors.white,
@@ -86,37 +96,37 @@ class _ModeSelectionScreenState extends State<ModeSelectionScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 50),
-                    ElevatedButton(
-                      onPressed: playMultiplayerMode,
-                      style: ButtonStyle(
-                        backgroundColor: MaterialStateProperty.all<Color>(
-                          const Color(0xFFFFC53D),
-                        ),
-                        padding: MaterialStateProperty.all<EdgeInsetsGeometry>(
-                          const EdgeInsets.all(20),
-                        ),
-                        shape: MaterialStateProperty.all<RoundedRectangleBorder>(
-                          RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                      child: const Text(
-                        "Multiplayer Mode",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          shadows: <Shadow>[
-                            Shadow(
-                              color: Colors.black,
-                              offset: Offset(1, 1),
-                              blurRadius: 2,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                    // const SizedBox(width: 50),
+                    // ElevatedButton(
+                    //   onPressed: playMultiplayerMode,
+                    //   style: ButtonStyle(
+                    //     backgroundColor: MaterialStateProperty.all<Color>(
+                    //       const Color(0xFFFFC53D),
+                    //     ),
+                    //     padding: MaterialStateProperty.all<EdgeInsetsGeometry>(
+                    //       const EdgeInsets.all(20),
+                    //     ),
+                    //     shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+                    //       RoundedRectangleBorder(
+                    //         borderRadius: BorderRadius.circular(4),
+                    //       ),
+                    //     ),
+                    //   ),
+                    //   child: const Text(
+                    //     "Multiplayer Mode",
+                    //     style: TextStyle(
+                    //       color: Colors.white,
+                    //       fontSize: 20,
+                    //       shadows: <Shadow>[
+                    //         Shadow(
+                    //           color: Colors.black,
+                    //           offset: Offset(1, 1),
+                    //           blurRadius: 2,
+                    //         ),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
               ],

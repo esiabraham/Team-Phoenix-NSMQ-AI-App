@@ -6,7 +6,7 @@ import 'package:phoenix_nsmq/utils.dart';
 
 // TODO: remove hardcode
 const questionsData =
-    "/home/aceix/proj/nsmq-hackathon/project-assets/questions/data.csv";
+    "/path/to/questions/data.csv";
 
 List<Question> loadQuestionsFromDisk(GameSubject subject) {
   List<TrueFalseQuestion> questions = [];
